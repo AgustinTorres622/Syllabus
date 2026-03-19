@@ -1,0 +1,182 @@
+from copy import deepcopy
+import os
+from tablero import Tablero
+
+class DCColores:
+    def __init__(self) -> None:
+        self.tableros = []
+        self.tablero_actual = -1
+        self.cambios_actuales = []
+        if os.path.exists("data"):
+            for archivo in os.listdir("data"):
+                if archivo.endswith(".brd"):
+                    self.cargar_tablero(archivo)
+
+    def cargar_tablero(self, archivo_tablero: str) -> None:
+        ruta = os.path.join("data", archivo_tablero)
+
+        with open(ruta, "r", encoding="utf-8") as f:
+            linea = f.readline().strip().split()
+            n = int(linea[0])
+            m = int(linea[1])
+
+            inicio = []
+            meta = []
+
+            for _ in range(n):
+                fila = f.readline().strip()
+                nueva = []
+
+                for c in fila:
+                    if c == "_":
+                        nueva.append(0)
+                    elif c == "#":
+                        nueva.append(1)
+                    elif c == "O":
+                        nueva.append(-1)
+
+                inicio.append(nueva)
+
+            for _ in range(n):
+                fila = f.readline().strip()
+                nueva = []
+
+                for c in fila:
+                    if c == "_":
+                        nueva.append(0)
+                    elif c == "#":
+                        nueva.append(1)
+                    elif c == "O":
+                        nueva.append(-1)
+
+                meta.append(nueva)
+
+        tablero = Tablero(inicio, meta)
+        self.tableros.append(tablero)
+
+    def guardar_cambios(self, nombre_archivo: str) -> None:
+        if self.tablero_actual == -1:
+            return
+
+        tablero = self.tableros[self.tablero_actual]
+
+        ruta = os.path.join("data", nombre_archivo + ".chg")
+
+        with open(ruta, "w", encoding="utf-8") as f:
+            n = tablero.n
+            m = tablero.m
+            c = len(self.cambios_actuales)
+
+            f.write(f"{n} {m} {c}\n")
+
+            actual = tablero.inicio
+            for fila in actual:
+                texto = ""
+                for valor in fila:
+                    if valor == 0:
+                        texto += "_"
+                    elif valor == 1:
+                        texto += "#"
+                    else:
+                        texto += "O"
+                f.write(texto + "\n")
+
+            for x, y in self.cambios_actuales:
+                actual = tablero.cambiar_color(actual, x, y)
+
+                f.write(f"{x} {y}\n")
+
+                for fila in actual:
+                    texto = ""
+                    for valor in fila:
+                        if valor == 0:
+                            texto += "_"
+                        elif valor == 1:
+                            texto += "#"
+                        else:
+                            texto += "O"
+                    f.write(texto + "\n")
+
+            f.write("\n")
+
+            #En DccColores la verdad todabia no logro entender bien como se conecta mi visual studio con el git o el git hub mas bien le entregue como yo abriria los tableros y lo cambiaria/ guardaria para correr el programa pero le entregue los archivos que tenemos en git hub y le pedi que me conecte lo que yo habia hecho con los tableros que deberian entregarme en git hub, no se si esta bien pero no logre hacerlo yo solo =( el utf-8 tampoco lo conocia me lo enseño
+
+# Tableros:
+
+class Tablero:
+    def __init__(self, inicio: list[list[int]], meta: list[list[int]]) -> None:
+        self.inicio = inicio
+        self.meta = meta
+        self.n = len(inicio)
+        self.m = len(inicio[0])
+
+#Aca le pedi ayuda a la ia no sabia que el self era la forma correcta de llamar a la funcion, segun lo que me dijo la Ia self es para crear una variable para toda la class, al principio lo hice estilo "N=len(inicio)"
+
+    def cambiar_color(self, tablero_actual: list[list[int]],
+                      x: int, y: int) -> list[list[int]]:
+        nuevo = deepcopy(tablero_actual)
+
+        for i in range(x-1, x+2):
+            for j in range(y-1, y+2):
+                if 0 <= i < self.n and 0 <= j < self.m:
+                    if nuevo[i][j] != 0:
+                        nuevo[i][j] *= -1
+
+        return nuevo
+
+    def aplicar_cambios(self, cambios: list[tuple[int]]) -> list[list[int]]:
+        tablero = deepcopy(self.inicio)
+
+        for x, y in cambios:
+            tablero = self.cambiar_color(tablero, x, y)
+
+        return tablero
+
+    def validar_solucion(self, cambios: list[tuple[int]]) -> bool:
+        final = self.aplicar_cambios(cambios)
+
+        if final == self.meta:
+            return True
+        return False
+
+    def encontrar_solucion(self, cambios: list[tuple[int]],
+                           cambios_adicionales: int) -> list[tuple[int]]:
+
+        tablero_actual = self.aplicar_cambios(cambios)
+
+        def backtracking(tablero, restantes, lista_cambios):
+            if tablero == self.meta:
+                return lista_cambios
+
+            if restantes == 0:
+                return []
+
+            for i in range(self.n):
+                for j in range(self.m):
+                    if tablero[i][j] != 0:
+                        nuevo = self.cambiar_color(tablero, i, j)
+
+                        resultado = backtracking(
+                            nuevo,
+                            restantes - 1,
+                            lista_cambios + [(i, j)]
+                        )
+
+                        if resultado != []:
+                            return resultado
+
+            return []
+
+        return backtracking(tablero_actual, cambios_adicionales, cambios)
+
+    def optimizar_solucion(self, cambios: list[tuple[int]]) -> list[tuple[int]]:
+        optimizada = []
+
+        for cambio in cambios:
+            if cambio in optimizada:
+                optimizada.remove(cambio)
+            else:
+                optimizada.append(cambio)
+
+        return optimizada
+print("hola como estas el codigo corrio sin error")
